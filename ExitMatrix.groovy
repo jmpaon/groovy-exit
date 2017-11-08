@@ -2,23 +2,24 @@ class ExitMatrix {
    
    final int varCount
    final double maxValue
-   private List<List<Double>> values
+   final List<String> varNames     /* Immutable */
+   final List<List<Double>> values /* Mutable   */
    
-   ExitMatrix(int varCount, double maxValue) {
-      this.varCount = varCount
-      this.values = new double[varCount][varCount]      
-      this.maxValue = maxValue
-   }
-
-   ExitMatrix(int varCount, ArrayList<ArrayList<Double>> values) {
+   ExitMatrix(int varCount, List<List<Double>> values) {
       this.varCount = varCount
       this.values   = values
       this.maxValue = this.values.collect { absMax(it) }.max()
    }
    
-   ExitMatrix(int varCount, double maxValue, ArrayList<ArrayList<Double>> values) {
+   ExitMatrix(int varCount, double maxValue, List<String> varNames, List<List<Double>> values) {
+      if(varCount<2)  throw new Exception("varCount is $varCount, minimum is 2")
+      if(maxValue<=0) throw new Exception("maxValue is $maxValue. maxValue must be a positive real")
+      if(!varNames.size() == varCount) throw new Exception ("varNames has ${varNames.size()} variable names, count must be equal to varCount ($varCount)")
+      
       this.varCount = varCount
       this.maxValue = maxValue
+      this.varNames = varNames.clone().asImmutable()
+      
       if(values.size() != this.varCount) throw new Exception("varCount is $varCount, only $values.size rows provided")
       values.eachWithIndex { it, i -> if(it.size() != this.varCount) throw new Exception("varCount is $varCount, row $i has length $it.size") }
       values.eachWithIndex { row, rowIndex -> 
@@ -27,13 +28,22 @@ class ExitMatrix {
                throw new Exception("row ${rowIndex+1}, column ${colIndex+1} has value $value, greater than the defined maxValue ($maxValue)") 
          }
       }
-      this.values = values
+      
+      // Impacts from Hx to Hx itself are not allowed, check
+      values.eachWithIndex { it, i -> if(it[i] != 0) throw new Exception("Impact on hypothesis itself on row ${i+1}") }
+      this.values = values.clone()
    }
    
    def show() {
       println "Exit matrix with $varCount variables, maxValue = $maxValue"
-      values.each { println it }
-      println "---------------"
+      Iterator varName = varNames.iterator()
+      java.text.DecimalFormat fmt = new java.text.DecimalFormat("+0.00;-0.00");
+      
+      values.eachWithIndex { it, i -> 
+         print "${varName.next()}:\t"
+         it.eachWithIndex {iit, ii -> if(i==ii) print "0\t"; else print "${fmt.format(iit)}\t"};
+         print "\n"
+      }
    }
    
    String toString() {
@@ -45,36 +55,29 @@ class ExitMatrix {
       list.collect { Math.abs(it) }.max()
    }
    
-   double get(int row, int column) { println "get at ($row,$column)"; values[row-1][column-1] }
+   double get(int row, int column) { values[row-1][column-1] }
    
    double set(int row, int column, double value) { values[row-1][column-1] = value }
    
    def setValuesToZero() {values.each { row -> row.each { value -> value = 0.0 } }}
    
-   List<Double> valuesToList() {this.values.flatten()}
-   
    List<Double> impacts(indices) {
-   
-      (0..indices.size()-2).step(1).collect { get(indices[it],indices[it+1]) }
-   
-      /*
-      def vs = new LinkedList<Double>()
-      for(int i=0;i<indices.size()-1;i++) {
-         vs << values [indices[i]-1] [indices[i+1]-1]
-      }
-      vs
-      */
+      (0..indices.size()-2).collect { get(indices[it],indices[it+1]) }
    }
    
    List<Integer> randomIndices(int length) {
       if( length < 1 || length > this.varCount ) throw new Exception("length > variable count")
       List<Integer> indices = (1..varCount).step(1)
-      Collections.shuffle(indices)      
+      Collections.shuffle(indices)
       indices.take(length)
    }
    
    double relativeImpact(List<Integer> listOfIndices) {
-      this.impacts(listOfIndices).sum() / (this.maxValue ** (listOfIndices.size()-1))
+      this.impacts(listOfIndices).inject(1) { prod, val -> (val / maxValue) * prod }      
    }
+   
+   double absMean() {}
+   
+   
 
 }
