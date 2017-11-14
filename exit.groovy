@@ -12,5 +12,9 @@ println em.relativeImpact(list)
 
 println em.absMean()
 
-(0..1000).each { chain = em.chainIndices(1,2,5); print "$chain : "; print "impacts: ${em.impacts(chain)} : "; println em.relativeImpact(chain)}
+def s = new ExitSampler(em, 10000)
+
+println s.summedImpactMatrix()
+
+// (0..1000).each { chain = em.chainIndices(1,2,5); print "$chain : "; print "impacts: ${em.impacts(chain)} : "; println em.relativeImpact(chain)}
 
