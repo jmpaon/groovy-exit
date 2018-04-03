@@ -1,3 +1,5 @@
+package exit
+
 /**
  * Class representing an impact matrix in an EXIT cross-impact model.
  * Can be used to represent a direct impact matrix (the input matrix)
@@ -87,7 +89,22 @@ class ExitMatrix {
 
     double absMean() { (this.values.flatten().inject(0) {Double sum, Double val -> sum += Math.abs(val) }) / (this.varCount**2 - this.varCount) }
 
+    double chainCountOfLength(int length) {
+        int i = varCount
+        double count = varCount
+        while(i > varCount - length + 1) {count *= --i}
+        count
+    }
 
+    double mediatorChainCountOfLength(int length) {
+        if(length>varCount) return 0;
+        if(length==1) return 0
+        if(length==2) return 1
+        int i = varCount-2
+        double count = i
+        while(i > varCount - length + 1) {count *= --i}
+        count
+    }
 
    
    
